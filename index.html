@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="B&amp;E">
+<meta name="theme-color" content="#1C1A17">
+<title>Brendan &amp; Ellen</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%231C1A17'/%3E%3Ctext x='90' y='115' font-family='Georgia,serif' font-size='68' font-weight='600' fill='%23F5F0E8' text-anchor='middle'%3EB%26E%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231C1A17'/%3E%3Ctext x='16' y='22' font-family='Georgia,serif' font-size='13' font-weight='600' fill='%23F5F0E8' text-anchor='middle'%3EB%26E%3C/text%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --cream:#F5F0E8;--warm:#FDFAF5;--ink:#1C1A17;--ink-l:#6B6560;--ink-f:#C4BDB5;
+  --accent:#C4773A;--acc-l:#F0DCC8;--green:#4A7C59;--green-l:#D4E8DC;
+  --red:#B5524A;--purple:#6B52A0;--purple-l:#EDE8F5;
+  --border:#E0D8CE;--card:#FFFFFF;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;min-height:100dvh;font-size:15px;overscroll-behavior:none}
+
+/* Lock */
+#lockScreen{position:fixed;inset:0;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;padding:32px}
+.lock-logo{font-family:'Playfair Display',serif;font-size:2.8rem;font-weight:600;color:var(--cream);margin-bottom:6px}
+.lock-sub{font-size:.76rem;color:var(--ink-f);letter-spacing:.1em;text-transform:uppercase;margin-bottom:48px;font-weight:300}
+.lock-input{width:100%;max-width:280px;padding:14px 18px;border:1px solid #3A3835;border-radius:12px;background:#2A2825;color:var(--cream);font-family:'DM Sans',sans-serif;font-size:1rem;text-align:center;letter-spacing:.2em;outline:none;margin-bottom:14px;transition:border-color .2s}
+.lock-input:focus{border-color:var(--accent)}
+.lock-input::placeholder{letter-spacing:.05em;color:#5A5855}
+.lock-btn{width:100%;max-width:280px;padding:13px;border:none;border-radius:12px;background:var(--accent);color:white;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:500;cursor:pointer}
+.lock-btn:active{background:#b06230}
+.lock-err{color:#E07070;font-size:.78rem;margin-top:10px;min-height:18px;text-align:center}
+
+/* Header */
+header{background:var(--ink);color:var(--cream);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;padding-top:max(14px,env(safe-area-inset-top))}
+header h1{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:600}
+.sync{font-size:.68rem;letter-spacing:.06em;display:flex;align-items:center;gap:5px;color:var(--ink-f)}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background .3s}
+
+/* Layout */
+.container{max-width:520px;margin:0 auto;padding:16px 14px;padding-bottom:max(80px,calc(60px + env(safe-area-inset-bottom)))}
+
+/* Cards */
+.card{background:var(--card);border-radius:15px;padding:20px 18px;border:1px solid var(--border);margin-bottom:14px;box-shadow:0 2px 10px rgba(28,26,23,.07)}
+
+/* Balance */
+.bal-label{font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-l);font-weight:500;margin-bottom:4px}
+.bal-row{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.bal-amt{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:600;line-height:1;transition:color .3s}
+.bal-sub{font-size:.78rem;color:var(--ink-l);margin-top:5px;font-weight:300}
+.bal-btns{display:flex;flex-direction:column;gap:7px;flex-shrink:0}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:14px}
+.stat{background:var(--card);border-radius:10px;padding:11px 13px;border:1px solid var(--border)}
+.stat-l{font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-l);margin-bottom:2px;font-weight:500}
+.stat-v{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:600}
+
+/* Tabs */
+.tabs{display:flex;gap:3px;background:var(--card);border-radius:10px;padding:3px;margin-bottom:14px;border:1px solid var(--border)}
+.tab{flex:1;padding:7px 4px;border:none;border-radius:8px;background:transparent;font-family:'DM Sans',sans-serif;font-size:.76rem;font-weight:500;color:var(--ink-l);cursor:pointer;text-align:center;transition:all .15s}
+.tab.active{background:var(--ink);color:var(--cream)}
+
+/* Buttons */
+.btn{border:none;border-radius:9px;padding:9px 14px;font-family:'DM Sans',sans-serif;font-size:.8rem;font-weight:500;cursor:pointer;white-space:nowrap;transition:transform .1s}
+.btn-primary{background:var(--ink);color:var(--cream)}
+.btn-green{background:var(--green);color:white}
+.btn-ghost{background:transparent;color:var(--ink-l);border:1px solid var(--border);font-size:.74rem;padding:5px 9px;border-radius:7px}
+.btn:active{transform:scale(.96)}
+
+/* Expense items */
+.exp-list{display:flex;flex-direction:column;gap:8px}
+.exp-item{background:var(--card);border-radius:11px;padding:11px 13px;border:1px solid var(--border);display:flex;align-items:center;gap:11px;animation:slideIn .18s ease}
+@keyframes slideIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+.exp-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0}
+.exp-info{flex:1;min-width:0}
+.exp-desc{font-weight:500;font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exp-meta{font-size:.7rem;color:var(--ink-l);margin-top:2px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.exp-right{text-align:right;flex-shrink:0}
+.exp-amt{font-family:'Playfair Display',serif;font-size:.98rem;font-weight:600}
+.exp-split{font-size:.68rem;color:var(--ink-l);margin-top:1px}
+
+/* Tags */
+.tag{display:inline-block;padding:1px 6px;border-radius:20px;font-size:.62rem;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.tag-b{background:var(--acc-l);color:var(--accent)}
+.tag-e{background:var(--purple-l);color:var(--purple)}
+.tag-s{background:var(--green-l);color:var(--green)}
+
+/* Month divider */
+.mdiv{text-align:center;position:relative;margin:14px 0 9px;font-size:.66rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-l);font-weight:500}
+.mdiv::before,.mdiv::after{content:'';position:absolute;top:50%;width:35%;height:1px;background:var(--border)}
+.mdiv::before{left:0}.mdiv::after{right:0}
+
+/* Empty */
+.empty{text-align:center;padding:40px 16px;color:var(--ink-l)}
+.empty-icon{font-size:1.9rem;margin-bottom:10px}
+.empty p{font-size:.82rem;font-weight:300}
+
+/* History */
+.h-month{background:var(--card);border-radius:12px;border:1px solid var(--border);margin-bottom:11px;overflow:hidden}
+.h-head{padding:12px 15px;display:flex;align-items:center;justify-content:space-between;background:var(--cream);cursor:pointer;user-select:none}
+.h-head:active{background:#EDE8DF}
+.h-title{font-family:'Playfair Display',serif;font-size:.9rem;font-weight:600}
+.h-sub{font-size:.7rem;color:var(--ink-l);margin-top:1px}
+.h-body{padding:10px 13px;display:flex;flex-direction:column;gap:7px}
+
+/* Payment item */
+.pay-item{background:var(--green-l);border-radius:8px;padding:9px 12px;display:flex;align-items:center;gap:9px;border:1px solid #B8D9C4}
+.pay-desc{font-size:.8rem;font-weight:500;color:var(--green)}
+.pay-meta{font-size:.68rem;color:#5A8A68;margin-top:1px}
+.pay-amt{font-family:'Playfair Display',serif;font-size:.95rem;font-weight:600;color:var(--green);flex-shrink:0}
+
+/* Bottom sheet */
+.overlay{position:fixed;inset:0;background:rgba(28,26,23,.52);z-index:100;display:flex;align-items:flex-end;justify-content:center;animation:fadeOv .15s ease}
+@keyframes fadeOv{from{opacity:0}to{opacity:1}}
+.sheet{background:var(--warm);border-radius:20px 20px 0 0;padding:20px 18px;width:100%;max-width:520px;animation:sheetUp .22s ease;max-height:92dvh;overflow-y:auto;padding-bottom:max(28px,env(safe-area-inset-bottom))}
+@keyframes sheetUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+.handle{width:34px;height:3px;background:var(--ink-f);border-radius:2px;margin:0 auto 16px}
+.sheet h2{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:600;margin-bottom:18px}
+
+/* Form */
+.fg{margin-bottom:13px}
+.fl{display:block;font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-l);margin-bottom:5px;font-weight:500}
+.fi,.fs{width:100%;padding:10px 11px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.9rem;background:white;color:var(--ink);outline:none;-webkit-appearance:none;appearance:none;transition:border-color .15s}
+.fi:focus,.fs:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--acc-l)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.who{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.who-opt{padding:10px;border-radius:8px;border:2px solid var(--border);text-align:center;cursor:pointer;font-size:.84rem;font-weight:500;background:white;transition:all .15s}
+.who-opt.sb{border-color:var(--accent);background:var(--acc-l);color:var(--accent)}
+.who-opt.se{border-color:var(--purple);background:var(--purple-l);color:var(--purple)}
+.ffoot{display:flex;gap:8px;margin-top:18px;justify-content:flex-end}
+
+/* FAB */
+.fab{position:fixed;bottom:max(22px,calc(14px + env(safe-area-inset-bottom)));right:18px;z-index:60;width:54px;height:54px;border-radius:50%;background:var(--ink);color:var(--cream);border:none;font-size:1.5rem;cursor:pointer;box-shadow:0 4px 18px rgba(28,26,23,.28);display:flex;align-items:center;justify-content:center;transition:transform .15s}
+.fab:active{transform:scale(.9)}
+
+/* Toast */
+.toast{position:fixed;bottom:max(88px,calc(70px + env(safe-area-inset-bottom)));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--cream);padding:9px 18px;border-radius:18px;font-size:.78rem;z-index:200;white-space:nowrap;animation:toastIn .2s ease}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* Loading */
+.loading{text-align:center;padding:48px 16px;color:var(--ink-l);font-size:.85rem}
+.spinner{width:26px;height:26px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Config banner */
+.cfg-banner{background:#FFF8E1;border:1px solid #FFE082;border-radius:11px;padding:13px 15px;margin-bottom:14px;font-size:.8rem;color:#5D4037;line-height:1.6}
+.cfg-banner a{color:var(--accent)}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--ink-f);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- ── Lock Screen ── -->
+<div id="lockScreen">
+  <div class="lock-logo">B &amp; E</div>
+  <div class="lock-sub">Shared Expenses</div>
+  <input class="lock-input" type="password" id="lockInput" placeholder="Enter password" autocomplete="current-password">
+  <button class="lock-btn" id="lockBtn">Unlock</button>
+  <div class="lock-err" id="lockErr"></div>
+</div>
+
+<!-- ── Main App ── -->
+<div id="app" style="display:none">
+  <header>
+    <h1>Brendan &amp; Ellen</h1>
+    <div class="sync"><div class="dot" id="syncDot" style="background:#C4773A"></div><span id="syncLabel">connecting…</span></div>
+  </header>
+
+  <div class="container">
+    <div id="cfgBanner" class="cfg-banner" style="display:none">
+      <strong>⚙️ One more step:</strong> Open <code>index.html</code> in a text editor, find the <code>firebaseConfig</code> section near the bottom, and paste in your Firebase credentials. <a href="https://console.firebase.google.com" target="_blank">Get them here →</a>
+    </div>
+
+    <div id="loadingEl" class="loading"><div class="spinner"></div>Loading shared data…</div>
+
+    <div id="mainContent" style="display:none">
+      <div class="card">
+        <div class="bal-label" id="balLabel">Balance</div>
+        <div class="bal-row">
+          <div>
+            <div class="bal-amt" id="balAmt">$0.00</div>
+            <div class="bal-sub" id="balSub">All settled up</div>
+          </div>
+          <div class="bal-btns">
+            <button class="btn btn-green" style="font-size:.75rem;padding:8px 12px" id="settleBtn">Record Payment</button>
+            <button class="btn btn-primary" style="font-size:.75rem;padding:8px 12px" id="addBtn">+ Add Expense</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="stat-l">Brendan</div><div class="stat-v" id="stB">$0</div></div>
+        <div class="stat"><div class="stat-l">Ellen</div><div class="stat-v" id="stE">$0</div></div>
+        <div class="stat"><div class="stat-l">This Month</div><div class="stat-v" id="stM">$0</div></div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="outstanding">Outstanding</button>
+        <button class="tab" data-tab="all">All</button>
+        <button class="tab" data-tab="history">History</button>
+      </div>
+
+      <div id="pane-outstanding"><div class="exp-list" id="listOut"></div></div>
+      <div id="pane-all" style="display:none"><div id="listAll"></div></div>
+      <div id="pane-history" style="display:none"><div id="listHist"></div></div>
+    </div>
+  </div>
+
+  <button class="fab" id="fabBtn">+</button>
+</div>
+
+<!-- ── Add Expense Sheet ── -->
+<div class="overlay" id="addModal" style="display:none">
+  <div class="sheet">
+    <div class="handle"></div>
+    <h2>Add Expense</h2>
+    <div class="fg"><label class="fl">Description</label><input class="fi" id="eDesc" placeholder="e.g. Trader Joe's run"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Amount ($)</label><input class="fi" id="eAmt" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+      <div class="fg"><label class="fl">Date</label><input class="fi" id="eDate" type="date"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Category</label>
+      <select class="fs" id="eCat">
+        <option>🛒 Groceries</option><option>🍽️ Dining</option><option>🏠 Household</option>
+        <option>🚗 Transport</option><option>💊 Health</option><option>🎬 Entertainment</option>
+        <option>✈️ Travel</option><option>📦 Other</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="fl">Paid by</label>
+      <div class="who"><div class="who-opt sb" id="wB">Brendan</div><div class="who-opt" id="wE">Ellen</div></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Split</label>
+      <select class="fs" id="eSplit">
+        <option value="50/50">50/50 split</option>
+        <option value="Brendan pays all">Brendan covers it</option>
+        <option value="Ellen pays all">Ellen covers it</option>
+      </select>
+    </div>
+    <div class="ffoot">
+      <button class="btn btn-ghost" id="addCancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="addSaveBtn">Add Expense</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Record Payment Sheet ── -->
+<div class="overlay" id="settleModal" style="display:none">
+  <div class="sheet">
+    <div class="handle"></div>
+    <h2>Record Payment</h2>
+    <p style="font-size:.8rem;color:var(--ink-l);margin-bottom:16px;font-weight:300">Record a transfer that settles part or all of the balance.</p>
+    <div class="fg"><label class="fl">Amount ($)</label><input class="fi" id="pAmt" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+    <div class="fg">
+      <label class="fl">Paid by</label>
+      <div class="who"><div class="who-opt sb" id="pwB">Brendan</div><div class="who-opt" id="pwE">Ellen</div></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Date</label><input class="fi" id="pDate" type="date"></div>
+      <div class="fg"><label class="fl">Note (optional)</label><input class="fi" id="pNote" placeholder="Venmo, cash…"></div>
+    </div>
+    <div class="ffoot">
+      <button class="btn btn-ghost" id="settleCancelBtn">Cancel</button>
+      <button class="btn btn-green" id="settleSaveBtn">Record Payment</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastEl" style="display:none" class="toast"></div>
+
+<!-- ════════════════════════════════════════════════════════
+     FIREBASE CONFIG — fill this in before uploading
+     ════════════════════════════════════════════════════════ -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ┌─────────────────────────────────────────────────────────┐
+// │  STEP 1 — Paste your Firebase config here               │
+// │  Firebase Console → Project Settings → Your apps        │
+// └─────────────────────────────────────────────────────────┘
+const firebaseConfig = {
+  apiKey:            "AIzaSyCzUOXkJcY2MfNj0HKDFlzo7Zx6kh8LrZQ",
+  authDomain:        "brellen-expenses.firebaseapp.com",
+  databaseURL:       "https://brellen-expenses-default-rtdb.firebaseio.com",
+  projectId:         "brellen-expenses",
+  storageBucket:     "brellen-expenses.firebasestorage.app",
+  messagingSenderId: "962219606605",
+  appId: "1:962219606605:web:0dcdfa6363a4fa4ec5d204",
+  measurementId: "G-QBPBMF9BKF"
+};
+
+// ┌─────────────────────────────────────────────────────────┐
+// │  STEP 2 — Set your shared password                      │
+// └─────────────────────────────────────────────────────────┘
+const APP_PASSWORD = "brellen";
+
+// ─── App State ───────────────────────────────────────────
+const DB_PATH = "be_expenses_v1";
+let expenses = [], payments = [];
+let ePayer = 'Brendan', pPayer = 'Brendan';
+let db, dataRef, configured = false;
+
+// ─── Helpers ─────────────────────────────────────────────
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+const todayISO = () => new Date().toISOString().split('T')[0];
+const fmt = n => '$' + Math.abs(n).toFixed(2);
+const fmtDate = iso => { const [y,m,d]=iso.split('-'); return new Date(y,m-1,d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); };
+const monthKey = iso => { const [y,m]=iso.split('-'); return `${y}-${m}`; };
+const monthLabel = k => { const [y,m]=k.split('-'); return new Date(y,m-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'}); };
+const CAT_CLR = {'🛒':'#E8F5E9','🍽️':'#FFF3E0','🏠':'#E3F2FD','🚗':'#F3E5F5','💊':'#FCE4EC','🎬':'#E8EAF6','✈️':'#E0F7FA','📦':'#F5F5F5'};
+const catClr = c => CAT_CLR[c?.split(' ')[0]] || '#F5F5F5';
+const catIco = c => c?.split(' ')[0] || '📦';
+const $ = id => document.getElementById(id);
+
+// ─── Lock Screen ─────────────────────────────────────────
+function tryUnlock() {
+  if ($('lockInput').value === APP_PASSWORD) {
+    $('lockScreen').style.display = 'none';
+    $('app').style.display = 'block';
+    initFirebase();
+  } else {
+    $('lockErr').textContent = 'Incorrect password. Try again.';
+    $('lockInput').value = '';
+    $('lockInput').focus();
+  }
+}
+$('lockBtn').addEventListener('click', tryUnlock);
+$('lockInput').addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
+
+// ─── Firebase Init ────────────────────────────────────────
+function initFirebase() {
+  if (firebaseConfig.apiKey === 'PASTE_API_KEY_HERE') {
+    $('cfgBanner').style.display = 'block';
+    $('loadingEl').style.display = 'none';
+    $('mainContent').style.display = 'block';
+    setSync('error');
+    render();
+    return;
+  }
+  configured = true;
+  try {
+    const app = initializeApp(firebaseConfig);
+    db = getDatabase(app);
+    dataRef = ref(db, DB_PATH);
+    onValue(dataRef, snap => {
+      const d = snap.val();
+      expenses = d?.expenses || [];
+      payments = d?.payments || [];
+      setSync('live');
+      $('loadingEl').style.display = 'none';
+      $('mainContent').style.display = 'block';
+      render();
+    }, err => {
+      console.error(err);
+      setSync('error');
+      $('loadingEl').style.display = 'none';
+      $('mainContent').style.display = 'block';
+    });
+  } catch(e) { console.error(e); setSync('error'); }
+}
+
+async function saveData() {
+  if (!configured) return;
+  setSync('syncing');
+  try { await set(dataRef, { expenses, payments }); setSync('live'); }
+  catch(e) { setSync('error'); }
+}
+
+function setSync(s) {
+  $('syncDot').style.background = {live:'#4A7C59',syncing:'#C4773A',error:'#B5524A'}[s]||'#C4773A';
+  $('syncLabel').textContent = {live:'live',syncing:'syncing…',error:'offline'}[s]||s;
+}
+
+// ─── Balance ──────────────────────────────────────────────
+function calcBalance() {
+  let net = 0;
+  for (const e of expenses) {
+    if (e.settled) continue;
+    const a = parseFloat(e.amount);
+    if (e.split === '50/50') { if (e.paidBy==='Brendan') net+=a/2; else net-=a/2; }
+  }
+  for (const p of payments) {
+    const a = parseFloat(p.amount);
+    if (p.paidBy==='Ellen') net-=a; else net+=a;
+  }
+  return net;
+}
+
+// ─── Render ───────────────────────────────────────────────
+function render() {
+  const net = calcBalance();
+  $('balAmt').style.color = Math.abs(net)<0.01 ? '#4A7C59' : net>0 ? '#C4773A' : '#B5524A';
+  $('balAmt').textContent = fmt(net);
+  $('balLabel').textContent = Math.abs(net)<0.01 ? 'Balance' : 'Outstanding';
+  $('balSub').textContent = Math.abs(net)<0.01 ? 'All settled up ✓' : net>0 ? 'Ellen owes Brendan' : 'Brendan owes Ellen';
+
+  const now = new Date(), cm = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  $('stB').textContent = fmt(expenses.filter(e=>e.paidBy==='Brendan').reduce((s,e)=>s+parseFloat(e.amount),0));
+  $('stE').textContent = fmt(expenses.filter(e=>e.paidBy==='Ellen').reduce((s,e)=>s+parseFloat(e.amount),0));
+  $('stM').textContent = fmt(expenses.filter(e=>monthKey(e.date)===cm).reduce((s,e)=>s+parseFloat(e.amount),0));
+
+  renderOut(); renderAll(); renderHist();
+}
+
+function expHTML(e) {
+  const a = parseFloat(e.amount);
+  const sp = e.split==='50/50' ? `50/50 · ea ${fmt(a/2)}` : e.split;
+  return `<div class="exp-item">
+    <div class="exp-icon" style="background:${catClr(e.category)}">${catIco(e.category)}</div>
+    <div class="exp-info">
+      <div class="exp-desc">${e.description}</div>
+      <div class="exp-meta">${fmtDate(e.date)}<span class="tag ${e.paidBy==='Brendan'?'tag-b':'tag-e'}">${e.paidBy}</span>${e.settled?'<span class="tag tag-s">settled</span>':''}</div>
+    </div>
+    <div class="exp-right"><div class="exp-amt">${fmt(a)}</div><div class="exp-split">${sp}</div></div>
+    <button class="btn btn-ghost" style="padding:4px 8px;font-size:.7rem;flex-shrink:0" data-del="${e.id}">✕</button>
+  </div>`;
+}
+
+function renderOut() {
+  const items = expenses.filter(e=>!e.settled).sort((a,b)=>b.date.localeCompare(a.date));
+  $('listOut').innerHTML = items.length ? items.map(expHTML).join('')
+    : '<div class="empty"><div class="empty-icon">✓</div><p>No outstanding expenses!</p></div>';
+}
+
+function renderAll() {
+  const items = [...expenses].sort((a,b)=>b.date.localeCompare(a.date));
+  if (!items.length) { $('listAll').innerHTML='<div class="empty"><div class="empty-icon">📋</div><p>No expenses yet.</p></div>'; return; }
+  const g={};
+  for (const e of items) { const k=monthKey(e.date); if(!g[k])g[k]=[]; g[k].push(e); }
+  $('listAll').innerHTML = Object.keys(g).sort().reverse().map(k=>
+    `<div class="mdiv">${monthLabel(k)}</div><div class="exp-list">${g[k].map(expHTML).join('')}</div>`
+  ).join('');
+}
+
+function renderHist() {
+  const months = [...new Set([...expenses.map(e=>monthKey(e.date)),...payments.map(p=>monthKey(p.date))])].sort().reverse();
+  if (!months.length) { $('listHist').innerHTML='<div class="empty"><div class="empty-icon">📅</div><p>History will appear here.</p></div>'; return; }
+  $('listHist').innerHTML = months.map(mk => {
+    const mEx=expenses.filter(e=>monthKey(e.date)===mk);
+    const mPay=payments.filter(p=>monthKey(p.date)===mk);
+    const tot=mEx.reduce((s,e)=>s+parseFloat(e.amount),0);
+    const bP=mEx.filter(e=>e.paidBy==='Brendan').reduce((s,e)=>s+parseFloat(e.amount),0);
+    const eP=mEx.filter(e=>e.paidBy==='Ellen').reduce((s,e)=>s+parseFloat(e.amount),0);
+    const payH=mPay.map(p=>`<div class="pay-item"><span style="font-size:1rem">💸</span><div style="flex:1"><div class="pay-desc">${p.paidBy} paid ${p.paidBy==='Ellen'?'Brendan':'Ellen'}${p.note?' · '+p.note:''}</div><div class="pay-meta">${fmtDate(p.date)}</div></div><div class="pay-amt">${fmt(p.amount)}</div></div>`).join('');
+    const exH=mEx.sort((a,b)=>b.date.localeCompare(a.date)).map(expHTML).join('');
+    return `<div class="h-month"><div class="h-head" data-toggle="hist"><div><div class="h-title">${monthLabel(mk)}</div><div class="h-sub">Total ${fmt(tot)} · B: ${fmt(bP)} · E: ${fmt(eP)}</div></div><span style="color:var(--ink-l);font-size:.95rem">▾</span></div><div class="h-body">${payH}${exH}</div></div>`;
+  }).join('');
+}
+
+// ─── Event delegation ────────────────────────────────────
+document.addEventListener('click', async e => {
+  // Delete expense
+  const delBtn = e.target.closest('[data-del]');
+  if (delBtn) { if (!confirm('Remove this expense?')) return; expenses=expenses.filter(x=>x.id!==delBtn.dataset.del); await saveData(); render(); return; }
+  // History toggle
+  const histHead = e.target.closest('[data-toggle="hist"]');
+  if (histHead) { const body=histHead.nextElementSibling, arr=histHead.querySelector('span'); body.style.display=body.style.display==='none'?'flex':'none'; arr.textContent=body.style.display==='none'?'▸':'▾'; return; }
+  // Overlays
+  if (e.target.id==='addModal' || e.target.id==='settleModal') closeAll();
+});
+
+// ─── Tabs ─────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    ['outstanding','all','history'].forEach(id => $('pane-'+id).style.display = id===btn.dataset.tab?'block':'none');
+  });
+});
+
+// ─── Payer toggles ───────────────────────────────────────
+$('wB').addEventListener('click', () => { ePayer='Brendan'; $('wB').className='who-opt sb'; $('wE').className='who-opt'; });
+$('wE').addEventListener('click', () => { ePayer='Ellen'; $('wE').className='who-opt se'; $('wB').className='who-opt'; });
+$('pwB').addEventListener('click', () => { pPayer='Brendan'; $('pwB').className='who-opt sb'; $('pwE').className='who-opt'; });
+$('pwE').addEventListener('click', () => { pPayer='Ellen'; $('pwE').className='who-opt se'; $('pwB').className='who-opt'; });
+
+// ─── Open/close modals ───────────────────────────────────
+function openAdd() {
+  $('eDesc').value=''; $('eAmt').value=''; $('eDate').value=todayISO();
+  $('eCat').value='🛒 Groceries'; $('eSplit').value='50/50';
+  ePayer='Brendan'; $('wB').className='who-opt sb'; $('wE').className='who-opt';
+  $('addModal').style.display='flex';
+  setTimeout(()=>$('eDesc').focus(),200);
+}
+function openSettle() {
+  const n=calcBalance();
+  $('pAmt').value=Math.abs(n)>0.01?Math.abs(n).toFixed(2):'';
+  $('pDate').value=todayISO(); $('pNote').value='';
+  pPayer=n>0?'Ellen':'Brendan';
+  $('pwB').className='who-opt'+(pPayer==='Brendan'?' sb':'');
+  $('pwE').className='who-opt'+(pPayer==='Ellen'?' se':'');
+  $('settleModal').style.display='flex';
+  setTimeout(()=>$('pAmt').focus(),200);
+}
+function closeAll() { $('addModal').style.display='none'; $('settleModal').style.display='none'; }
+
+$('addBtn').addEventListener('click', openAdd);
+$('settleBtn').addEventListener('click', openSettle);
+$('fabBtn').addEventListener('click', openAdd);
+$('addCancelBtn').addEventListener('click', closeAll);
+$('addSaveBtn').addEventListener('click', async () => {
+  const desc=$('eDesc').value.trim(), amt=parseFloat($('eAmt').value), date=$('eDate').value;
+  if (!desc||!amt||amt<=0||!date) return;
+  expenses.push({id:uid(),description:desc,amount:amt.toFixed(2),date,category:$('eCat').value,paidBy:ePayer,split:$('eSplit').value,settled:false,createdAt:new Date().toISOString()});
+  closeAll(); await saveData(); render(); showToast('Expense added');
+});
+$('settleCancelBtn').addEventListener('click', closeAll);
+$('settleSaveBtn').addEventListener('click', async () => {
+  const amt=parseFloat($('pAmt').value), date=$('pDate').value;
+  if (!amt||amt<=0||!date) return;
+  payments.push({id:uid(),amount:amt.toFixed(2),date,paidBy:pPayer,note:$('pNote').value.trim(),createdAt:new Date().toISOString()});
+  closeAll(); await saveData(); render(); showToast('Payment recorded');
+});
+
+// ─── Toast ───────────────────────────────────────────────
+function showToast(msg) {
+  const t=$('toastEl'); t.textContent=msg; t.style.display='block';
+  setTimeout(()=>t.style.display='none',2200);
+}
+</script>
+</body>
+</html>
