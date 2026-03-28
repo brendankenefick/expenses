@@ -239,8 +239,8 @@ header h1{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:600}
       <label class="fl">Split</label>
       <select class="fs" id="eSplit">
         <option value="50/50">50/50 split</option>
-        <option value="Brendan pays all">Brendan covers it</option>
-        <option value="Ellen pays all">Ellen covers it</option>
+        <option value="Brendan's expense">Brendan's expense</option>
+        <option value="Ellen's expense">Ellen's expense</option>
       </select>
     </div>
     <div class="ffoot">
@@ -299,8 +299,8 @@ header h1{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:600}
       <label class="fl">Split</label>
       <select class="fs" id="eeSplit">
         <option value="50/50">50/50 split</option>
-        <option value="Brendan pays all">Brendan covers it</option>
-        <option value="Ellen pays all">Ellen covers it</option>
+        <option value="Brendan's expense">Brendan's expense</option>
+        <option value="Ellen's expense">Ellen's expense</option>
       </select>
     </div>
     <div class="ffoot">
@@ -441,26 +441,34 @@ function setSync(s) {
 
 // ─── Balance ──────────────────────────────────────────────
 // net > 0 = Ellen owes Brendan; net < 0 = Brendan owes Ellen
+//
+// Split logic:
+//   50/50          → payer is owed half by the other person
+//   Brendan expense → it's Brendan's bill; whoever paid is owed the full amount by Brendan
+//   Ellen expense   → it's Ellen's bill; whoever paid is owed the full amount by Ellen
 function calcBalance() {
   let net = 0;
   for (const e of expenses) {
     if (e.settled) continue;
     const a = parseFloat(e.amount);
     if (e.split === '50/50') {
-      // Each owes half; payer is owed half back
-      if (e.paidBy === 'Brendan') net += a / 2;
-      else net -= a / 2;
-    } else if (e.split === 'Brendan pays all') {
-      // Brendan paid and covers it entirely — no debt created
-    } else if (e.split === 'Ellen pays all') {
-      // Ellen paid and covers it entirely — no debt created
+      // Payer fronted the money; non-payer owes half back
+      if (e.paidBy === 'Brendan') net += a / 2;   // Ellen owes Brendan half
+      else                         net -= a / 2;   // Brendan owes Ellen half
+    } else if (e.split === "Brendan's expense") {
+      // It's Brendan's bill — he owes the full amount to whoever paid
+      if (e.paidBy === 'Ellen') net -= a;  // Brendan owes Ellen full amount
+      // If Brendan paid his own bill: no debt
+    } else if (e.split === "Ellen's expense") {
+      // It's Ellen's bill — she owes the full amount to whoever paid
+      if (e.paidBy === 'Brendan') net += a;  // Ellen owes Brendan full amount
+      // If Ellen paid her own bill: no debt
     }
-    // Future-proof: any other split value ignored
   }
   for (const p of payments) {
     const a = parseFloat(p.amount);
     if (p.paidBy === 'Ellen') net -= a; // Ellen paying Brendan reduces what she owes
-    else net += a;                       // Brendan paying Ellen increases what she owes
+    else                       net += a; // Brendan paying Ellen reduces what he owes
   }
   return net;
 }
@@ -483,7 +491,7 @@ function render() {
 
 function expHTML(e) {
   const a = parseFloat(e.amount);
-  const sp = e.split==='50/50' ? `50/50 · ea ${fmt(a/2)}` : e.split;
+  const sp = e.split==='50/50' ? `50/50 · ea ${fmt(a/2)}` : e.split==='Brendan\'s expense' ? `Brendan's expense (full)` : e.split==='Ellen\'s expense' ? `Ellen's expense (full)` : e.split;
   return `<div class="exp-item" style="cursor:pointer" data-edit-exp="${e.id}">
     <div class="exp-icon" style="background:${catClr(e.category)}">${catIco(e.category)}</div>
     <div class="exp-info">
