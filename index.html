@@ -272,6 +272,67 @@ header h1{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:600}
   </div>
 </div>
 
+
+<!-- ── Edit Expense Sheet ── -->
+<div class="overlay" id="editExpModal" style="display:none">
+  <div class="sheet">
+    <div class="handle"></div>
+    <h2>Edit Expense</h2>
+    <div class="fg"><label class="fl">Description</label><input class="fi" id="eeDesc" placeholder="e.g. Trader Joe's run"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Amount ($)</label><input class="fi" id="eeAmt" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+      <div class="fg"><label class="fl">Date</label><input class="fi" id="eeDate" type="date"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Category</label>
+      <select class="fs" id="eeCat">
+        <option>🛒 Groceries</option><option>🍽️ Dining</option><option>🏠 Household</option>
+        <option>🚗 Transport</option><option>💊 Health</option><option>🎬 Entertainment</option>
+        <option>✈️ Travel</option><option>📦 Other</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="fl">Paid by</label>
+      <div class="who"><div class="who-opt sb" id="eeWB">Brendan</div><div class="who-opt" id="eeWE">Ellen</div></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Split</label>
+      <select class="fs" id="eeSplit">
+        <option value="50/50">50/50 split</option>
+        <option value="Brendan pays all">Brendan covers it</option>
+        <option value="Ellen pays all">Ellen covers it</option>
+      </select>
+    </div>
+    <div class="ffoot">
+      <button class="btn btn-ghost" id="eeDeleteBtn" style="color:#B5524A;border-color:#F0D8D6;margin-right:auto">Delete</button>
+      <button class="btn btn-ghost" id="eeCancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="eeSaveBtn">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edit Payment Sheet ── -->
+<div class="overlay" id="editPayModal" style="display:none">
+  <div class="sheet">
+    <div class="handle"></div>
+    <h2>Edit Payment</h2>
+    <div class="fg"><label class="fl">Amount ($)</label><input class="fi" id="epAmt" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+    <div class="fg">
+      <label class="fl">Paid by</label>
+      <div class="who"><div class="who-opt sb" id="epWB">Brendan</div><div class="who-opt" id="epWE">Ellen</div></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Date</label><input class="fi" id="epDate" type="date"></div>
+      <div class="fg"><label class="fl">Note (optional)</label><input class="fi" id="epNote" placeholder="Venmo, cash..."></div>
+    </div>
+    <div class="ffoot">
+      <button class="btn btn-ghost" id="epDeleteBtn" style="color:#B5524A;border-color:#F0D8D6;margin-right:auto">Delete</button>
+      <button class="btn btn-ghost" id="epCancelBtn">Cancel</button>
+      <button class="btn btn-green" id="epSaveBtn">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <div id="toastEl" style="display:none" class="toast"></div>
 
 <!-- ════════════════════════════════════════════════════════
@@ -379,16 +440,27 @@ function setSync(s) {
 }
 
 // ─── Balance ──────────────────────────────────────────────
+// net > 0 = Ellen owes Brendan; net < 0 = Brendan owes Ellen
 function calcBalance() {
   let net = 0;
   for (const e of expenses) {
     if (e.settled) continue;
     const a = parseFloat(e.amount);
-    if (e.split === '50/50') { if (e.paidBy==='Brendan') net+=a/2; else net-=a/2; }
+    if (e.split === '50/50') {
+      // Each owes half; payer is owed half back
+      if (e.paidBy === 'Brendan') net += a / 2;
+      else net -= a / 2;
+    } else if (e.split === 'Brendan pays all') {
+      // Brendan paid and covers it entirely — no debt created
+    } else if (e.split === 'Ellen pays all') {
+      // Ellen paid and covers it entirely — no debt created
+    }
+    // Future-proof: any other split value ignored
   }
   for (const p of payments) {
     const a = parseFloat(p.amount);
-    if (p.paidBy==='Ellen') net-=a; else net+=a;
+    if (p.paidBy === 'Ellen') net -= a; // Ellen paying Brendan reduces what she owes
+    else net += a;                       // Brendan paying Ellen increases what she owes
   }
   return net;
 }
@@ -412,14 +484,14 @@ function render() {
 function expHTML(e) {
   const a = parseFloat(e.amount);
   const sp = e.split==='50/50' ? `50/50 · ea ${fmt(a/2)}` : e.split;
-  return `<div class="exp-item">
+  return `<div class="exp-item" style="cursor:pointer" data-edit-exp="${e.id}">
     <div class="exp-icon" style="background:${catClr(e.category)}">${catIco(e.category)}</div>
     <div class="exp-info">
       <div class="exp-desc">${e.description}</div>
       <div class="exp-meta">${fmtDate(e.date)}<span class="tag ${e.paidBy==='Brendan'?'tag-b':'tag-e'}">${e.paidBy}</span>${e.settled?'<span class="tag tag-s">settled</span>':''}</div>
     </div>
     <div class="exp-right"><div class="exp-amt">${fmt(a)}</div><div class="exp-split">${sp}</div></div>
-    <button class="btn btn-ghost" style="padding:4px 8px;font-size:.7rem;flex-shrink:0" data-del="${e.id}">✕</button>
+    <span style="color:var(--ink-f);font-size:.8rem;flex-shrink:0;padding-left:4px">›</span>
   </div>`;
 }
 
@@ -448,7 +520,7 @@ function renderHist() {
     const tot=mEx.reduce((s,e)=>s+parseFloat(e.amount),0);
     const bP=mEx.filter(e=>e.paidBy==='Brendan').reduce((s,e)=>s+parseFloat(e.amount),0);
     const eP=mEx.filter(e=>e.paidBy==='Ellen').reduce((s,e)=>s+parseFloat(e.amount),0);
-    const payH=mPay.map(p=>`<div class="pay-item"><span style="font-size:1rem">💸</span><div style="flex:1"><div class="pay-desc">${p.paidBy} paid ${p.paidBy==='Ellen'?'Brendan':'Ellen'}${p.note?' · '+p.note:''}</div><div class="pay-meta">${fmtDate(p.date)}</div></div><div class="pay-amt">${fmt(p.amount)}</div></div>`).join('');
+    const payH=mPay.map(p=>`<div class="pay-item" style="cursor:pointer" data-edit-pay="${p.id}"><span style="font-size:1rem">💸</span><div style="flex:1"><div class="pay-desc">${p.paidBy} paid ${p.paidBy==='Ellen'?'Brendan':'Ellen'}${p.note?' · '+p.note:''}</div><div class="pay-meta">${fmtDate(p.date)}</div></div><div class="pay-amt">${fmt(p.amount)}</div><span style="color:#5A8A68;font-size:.8rem;flex-shrink:0;padding-left:4px">›</span></div>`).join('');
     const exH=mEx.sort((a,b)=>b.date.localeCompare(a.date)).map(expHTML).join('');
     return `<div class="h-month"><div class="h-head" data-toggle="hist"><div><div class="h-title">${monthLabel(mk)}</div><div class="h-sub">Total ${fmt(tot)} · B: ${fmt(bP)} · E: ${fmt(eP)}</div></div><span style="color:var(--ink-l);font-size:.95rem">▾</span></div><div class="h-body">${payH}${exH}</div></div>`;
   }).join('');
@@ -456,14 +528,86 @@ function renderHist() {
 
 // ─── Event delegation ────────────────────────────────────
 document.addEventListener('click', async e => {
-  // Delete expense
-  const delBtn = e.target.closest('[data-del]');
-  if (delBtn) { if (!confirm('Remove this expense?')) return; expenses=expenses.filter(x=>x.id!==delBtn.dataset.del); await saveData(); render(); return; }
+  // Edit expense (tap row)
+  const editExpRow = e.target.closest('[data-edit-exp]');
+  if (editExpRow) { openEditExp(editExpRow.dataset.editExp); return; }
+  // Edit payment (tap row)
+  const editPayRow = e.target.closest('[data-edit-pay]');
+  if (editPayRow) { openEditPay(editPayRow.dataset.editPay); return; }
   // History toggle
   const histHead = e.target.closest('[data-toggle="hist"]');
   if (histHead) { const body=histHead.nextElementSibling, arr=histHead.querySelector('span'); body.style.display=body.style.display==='none'?'flex':'none'; arr.textContent=body.style.display==='none'?'▸':'▾'; return; }
   // Overlays
-  if (e.target.id==='addModal' || e.target.id==='settleModal') closeAll();
+  if (['addModal','settleModal','editExpModal','editPayModal'].includes(e.target.id)) closeAll();
+});
+
+// ─── Edit Expense ────────────────────────────────────────
+let editingExpId = null, eePayerLocal = 'Brendan';
+
+function openEditExp(id) {
+  const e = expenses.find(x => x.id === id);
+  if (!e) return;
+  editingExpId = id;
+  $('eeDesc').value = e.description;
+  $('eeAmt').value = e.amount;
+  $('eeDate').value = e.date;
+  $('eeCat').value = e.category;
+  $('eeSplit').value = e.split;
+  eePayerLocal = e.paidBy;
+  $('eeWB').className = 'who-opt' + (eePayerLocal==='Brendan' ? ' sb' : '');
+  $('eeWE').className = 'who-opt' + (eePayerLocal==='Ellen' ? ' se' : '');
+  $('editExpModal').style.display = 'flex';
+}
+
+$('eeWB').addEventListener('click', () => { eePayerLocal='Brendan'; $('eeWB').className='who-opt sb'; $('eeWE').className='who-opt'; });
+$('eeWE').addEventListener('click', () => { eePayerLocal='Ellen'; $('eeWE').className='who-opt se'; $('eeWB').className='who-opt'; });
+$('eeCancelBtn').addEventListener('click', closeAll);
+$('eeDeleteBtn').addEventListener('click', async () => {
+  if (!confirm('Delete this expense?')) return;
+  expenses = expenses.filter(x => x.id !== editingExpId);
+  closeAll(); await saveData(); render(); showToast('Expense deleted');
+});
+$('eeSaveBtn').addEventListener('click', async () => {
+  const desc = $('eeDesc').value.trim(), amt = parseFloat($('eeAmt').value), date = $('eeDate').value;
+  if (!desc || !amt || amt<=0 || !date) return;
+  expenses = expenses.map(x => x.id !== editingExpId ? x : {
+    ...x, description:desc, amount:amt.toFixed(2), date, category:$('eeCat').value,
+    paidBy:eePayerLocal, split:$('eeSplit').value
+  });
+  closeAll(); await saveData(); render(); showToast('Expense updated');
+});
+
+// ─── Edit Payment ────────────────────────────────────────
+let editingPayId = null, epPayerLocal = 'Brendan';
+
+function openEditPay(id) {
+  const p = payments.find(x => x.id === id);
+  if (!p) return;
+  editingPayId = id;
+  $('epAmt').value = p.amount;
+  $('epDate').value = p.date;
+  $('epNote').value = p.note || '';
+  epPayerLocal = p.paidBy;
+  $('epWB').className = 'who-opt' + (epPayerLocal==='Brendan' ? ' sb' : '');
+  $('epWE').className = 'who-opt' + (epPayerLocal==='Ellen' ? ' se' : '');
+  $('editPayModal').style.display = 'flex';
+}
+
+$('epWB').addEventListener('click', () => { epPayerLocal='Brendan'; $('epWB').className='who-opt sb'; $('epWE').className='who-opt'; });
+$('epWE').addEventListener('click', () => { epPayerLocal='Ellen'; $('epWE').className='who-opt se'; $('epWB').className='who-opt'; });
+$('epCancelBtn').addEventListener('click', closeAll);
+$('epDeleteBtn').addEventListener('click', async () => {
+  if (!confirm('Delete this payment?')) return;
+  payments = payments.filter(x => x.id !== editingPayId);
+  closeAll(); await saveData(); render(); showToast('Payment deleted');
+});
+$('epSaveBtn').addEventListener('click', async () => {
+  const amt = parseFloat($('epAmt').value), date = $('epDate').value;
+  if (!amt || amt<=0 || !date) return;
+  payments = payments.map(x => x.id !== editingPayId ? x : {
+    ...x, amount:amt.toFixed(2), date, paidBy:epPayerLocal, note:$('epNote').value.trim()
+  });
+  closeAll(); await saveData(); render(); showToast('Payment updated');
 });
 
 // ─── Tabs ─────────────────────────────────────────────────
@@ -499,7 +643,7 @@ function openSettle() {
   $('settleModal').style.display='flex';
   setTimeout(()=>$('pAmt').focus(),200);
 }
-function closeAll() { $('addModal').style.display='none'; $('settleModal').style.display='none'; }
+function closeAll() { ['addModal','settleModal','editExpModal','editPayModal'].forEach(id=>$(id).style.display='none'); }
 
 $('addBtn').addEventListener('click', openAdd);
 $('settleBtn').addEventListener('click', openSettle);
