@@ -71,7 +71,12 @@ header h1{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:600}
 
 /* Expense items */
 .exp-list{display:flex;flex-direction:column;gap:8px}
-.exp-item{background:var(--card);border-radius:11px;padding:11px 13px;border:1px solid var(--border);display:flex;align-items:center;gap:11px;animation:slideIn .18s ease}
+/* Swipe-to-delete wrapper */
+.swipe-wrap{position:relative;overflow:hidden;border-radius:11px}
+.swipe-delete-bg{position:absolute;right:0;top:0;bottom:0;width:80px;background:var(--red);display:flex;align-items:center;justify-content:center;border-radius:11px;transition:width .15s}
+.swipe-delete-bg svg{width:20px;height:20px;fill:white;flex-shrink:0}
+.exp-item{background:var(--card);border-radius:11px;padding:11px 13px;border:1px solid var(--border);display:flex;align-items:center;gap:11px;animation:slideIn .18s ease;position:relative;touch-action:pan-y;user-select:none;transition:transform .05s linear;will-change:transform}
+.exp-item.swiping{transition:none}
 @keyframes slideIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
 .exp-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0}
 .exp-info{flex:1;min-width:0}
@@ -491,7 +496,7 @@ function render() {
 
 function expHTML(e) {
   const a = parseFloat(e.amount);
-  const sp = e.split==='50/50' ? `50/50 · ea ${fmt(a/2)}` : e.split==='Brendan\'s expense' ? `Brendan's expense (full)` : e.split==='Ellen\'s expense' ? `Ellen's expense (full)` : e.split;
+  const sp = e.split==='50/50' ? `50/50 · ea ${fmt(a/2)}` : e.split==="Brendan's expense" ? `Brendan's expense (full)` : e.split==="Ellen's expense" ? `Ellen's expense (full)` : e.split;
   return `<div class="exp-item" style="cursor:pointer" data-edit-exp="${e.id}">
     <div class="exp-icon" style="background:${catClr(e.category)}">${catIco(e.category)}</div>
     <div class="exp-info">
@@ -503,10 +508,43 @@ function expHTML(e) {
   </div>`;
 }
 
+// Wrap an expense in swipe-delete scaffolding
+function swipeWrap(e) {
+  return `<div class="swipe-wrap" data-swipe-id="${e.id}">
+    <div class="swipe-delete-bg"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div>
+    ${expHTML(e)}
+  </div>`;
+}
+
 function renderOut() {
-  const items = expenses.filter(e=>!e.settled).sort((a,b)=>b.date.localeCompare(a.date));
-  $('listOut').innerHTML = items.length ? items.map(expHTML).join('')
-    : '<div class="empty"><div class="empty-icon">✓</div><p>No outstanding expenses!</p></div>';
+  // Find the most recent payment date, if any
+  const lastPayment = payments.length
+    ? payments.reduce((latest, p) => p.createdAt > latest.createdAt ? p : latest)
+    : null;
+
+  // Expenses added after the last payment are "new" outstanding items
+  const newItems = lastPayment
+    ? expenses.filter(e => !e.settled && e.createdAt > lastPayment.createdAt)
+    : expenses.filter(e => !e.settled);
+
+  newItems.sort((a,b) => b.date.localeCompare(a.date));
+
+  const net = calcBalance();
+  const hasResidual = Math.abs(net) > 0.01 && lastPayment && newItems.length === 0;
+
+  if (newItems.length) {
+    $('listOut').innerHTML = newItems.map(e => swipeWrap(e)).join('');
+    attachSwipeHandlers();
+  } else if (hasResidual) {
+    const who = net > 0 ? 'Ellen' : 'Brendan';
+    const owes = net > 0 ? 'Brendan' : 'Ellen';
+    $('listOut').innerHTML = `<div class="empty">
+      <div class="empty-icon">💳</div>
+      <p>No new expenses — but <strong>${who}</strong> still owes <strong>${owes}</strong> <strong>${fmt(net)}</strong> from before the last payment.</p>
+    </div>`;
+  } else {
+    $('listOut').innerHTML = '<div class="empty"><div class="empty-icon">✓</div><p>All caught up! No outstanding expenses.</p></div>';
+  }
 }
 
 function renderAll() {
@@ -515,8 +553,9 @@ function renderAll() {
   const g={};
   for (const e of items) { const k=monthKey(e.date); if(!g[k])g[k]=[]; g[k].push(e); }
   $('listAll').innerHTML = Object.keys(g).sort().reverse().map(k=>
-    `<div class="mdiv">${monthLabel(k)}</div><div class="exp-list">${g[k].map(expHTML).join('')}</div>`
+    `<div class="mdiv">${monthLabel(k)}</div><div class="exp-list">${g[k].map(e=>swipeWrap(e)).join('')}</div>`
   ).join('');
+  attachSwipeHandlers();
 }
 
 function renderHist() {
@@ -532,6 +571,63 @@ function renderHist() {
     const exH=mEx.sort((a,b)=>b.date.localeCompare(a.date)).map(expHTML).join('');
     return `<div class="h-month"><div class="h-head" data-toggle="hist"><div><div class="h-title">${monthLabel(mk)}</div><div class="h-sub">Total ${fmt(tot)} · B: ${fmt(bP)} · E: ${fmt(eP)}</div></div><span style="color:var(--ink-l);font-size:.95rem">▾</span></div><div class="h-body">${payH}${exH}</div></div>`;
   }).join('');
+}
+
+// ─── Swipe-to-delete ─────────────────────────────────────
+function attachSwipeHandlers() {
+  document.querySelectorAll('.swipe-wrap').forEach(wrap => {
+    const item = wrap.querySelector('.exp-item');
+    const bg = wrap.querySelector('.swipe-delete-bg');
+    let startX = 0, currentX = 0, isDragging = false;
+    const THRESHOLD = 72; // px to trigger delete
+
+    item.addEventListener('touchstart', e => {
+      startX = e.touches[0].clientX;
+      currentX = 0;
+      isDragging = true;
+      item.classList.add('swiping');
+    }, {passive: true});
+
+    item.addEventListener('touchmove', e => {
+      if (!isDragging) return;
+      const dx = e.touches[0].clientX - startX;
+      if (dx > 0) { currentX = 0; item.style.transform = ''; return; } // no right swipe
+      currentX = Math.max(dx, -THRESHOLD - 16); // clamp
+      item.style.transform = `translateX(${currentX}px)`;
+      // grow the red bg as you swipe
+      const pct = Math.min(Math.abs(currentX) / THRESHOLD, 1);
+      bg.style.width = `${Math.max(0, Math.abs(currentX))}px`;
+      bg.style.opacity = pct;
+    }, {passive: true});
+
+    item.addEventListener('touchend', async () => {
+      if (!isDragging) return;
+      isDragging = false;
+      item.classList.remove('swiping');
+
+      if (Math.abs(currentX) >= THRESHOLD) {
+        // Confirmed — animate out and delete
+        item.style.transition = 'transform .2s ease, opacity .2s ease';
+        item.style.transform = `translateX(-110%)`;
+        item.style.opacity = '0';
+        wrap.style.transition = 'max-height .25s ease, opacity .25s ease';
+        wrap.style.maxHeight = wrap.offsetHeight + 'px';
+        setTimeout(() => { wrap.style.maxHeight = '0'; wrap.style.opacity = '0'; }, 50);
+        setTimeout(async () => {
+          const id = wrap.dataset.swipeId;
+          expenses = expenses.filter(x => x.id !== id);
+          await saveData(); render(); showToast('Expense deleted');
+        }, 280);
+      } else {
+        // Snap back
+        item.style.transition = 'transform .2s ease';
+        item.style.transform = '';
+        bg.style.width = '0';
+        bg.style.opacity = '0';
+        setTimeout(() => item.style.transition = '', 200);
+      }
+    });
+  });
 }
 
 // ─── Event delegation ────────────────────────────────────
